@@ -6,6 +6,9 @@ use std::fmt::Debug;
 use zellij_utils::input::actions::SearchDirection;
 use zellij_utils::position::Position;
 
+// Catch the enter in a search
+const ENTER_KEY: &str = "\u{2386}";
+
 // If char is neither alphanumeric nor an underscore do we consider it a word-boundary
 fn is_word_boundary(x: &Option<char>) -> bool {
     x.map_or(true, |c| !c.is_ascii_alphanumeric() && c != '_')
@@ -413,18 +416,22 @@ impl Grid {
     pub fn set_search_string(&mut self, needle: &str) {
         self.search_results.needle = needle.to_string();
         self.search_viewport();
-        // If the current viewport does not contain any hits,
-        // we jump around until we find something. Starting
-        // going backwards.
-        if self.search_results.selections.is_empty() {
-            self.search_up();
-        }
-        if self.search_results.selections.is_empty() {
-            self.search_down();
+
+        log::info!("Search term: {}", needle);
+        match needle {
+            ENTER_KEY => {
+                if self.search_results.selections.is_empty() {
+                    self.search_up();
+                }
+                if self.search_results.selections.is_empty() {
+                    self.search_down();
+                }
+                self.is_scrolled = true;
+            },
+            _ => {},
         }
         // We still don't want to pre-select anything at this stage
         self.search_results.active = None;
-        self.is_scrolled = true;
     }
 
     pub fn search_viewport(&mut self) {
